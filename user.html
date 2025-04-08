@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git App - Felhasználói profil</title>
+    <link rel="stylesheet" href="style.css">
+    
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="user-profile" class="card">
+            <!-- Tartalom dinamikusan töltődik -->
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Felhasználónév kinyerése az URL-ből
+        const urlParams = new URLSearchParams(window.location.search);
+        const username = urlParams.get('id');
+
+        if (!username) {
+            showUserSearchForm();
+        } else {
+            loadUserData(username);
+        }
+
+        function showUserSearchForm() {
+            const userProfile = document.getElementById('user-profile');
+            userProfile.innerHTML = `
+                <h2>Nincs megadva felhasználó</h2>
+                <p>Kérjük, adj meg egy GitHub felhasználónevet!</p>
+                <div class="search-box">
+                    <input type="text" id="manual-username" placeholder="GitHub felhasználónév">
+                    <button onclick="searchUser()" class="btn btn-primary">Keresés</button>
+                </div>
+                <p>Vagy <a href="repo-search.html">keress repository-k között</a></p>
+            `;
+        }
+
+        function searchUser() {
+            const manualUsername = document.getElementById('manual-username').value.trim();
+            if (manualUsername) {
+                window.location.href = `user.html?id=${encodeURIComponent(manualUsername)}`;
+            } else {
+                alert('Kérjük, adj meg egy érvényes felhasználónevet!');
+            }
+        }
+
+        function loadUserData(username) {
+            fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
+                headers: {
+                    'Authorization': 'Bearer ' + GITHUB_ACCESS_TOKEN
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Felhasználó nem található');
+                }
+                return response.json();
+            })
+            .then(user => {
+                displayUserData(user);
+            })
+            .catch(error => {
+                const userProfile = document.getElementById('user-profile');
+                userProfile.innerHTML = `
+                    <h2>Hiba történt</h2>
+                    <p>${error.message}</p>
+                    <button onclick="showUserSearchForm()" class="btn btn-primary">Új keresés</button>
+                `;
+            });
+        }
+
+        function displayUserData(user) {
+            const userProfile = document.getElementById('user-profile');
+            let profileHTML = '';
+            
+            // Profilkép
+            if (user.avatar_url) {
+                profileHTML += `<img src="${user.avatar_url}" alt="${user.login} profilképe" class="profile-avatar">`;
+            }
+            
+            // Név
+            profileHTML += `<h2>${user.name || user.login}</h2>`;
+            
+            // Felhasználónév
+            if (user.login) {
+                profileHTML += `<p><a href="https://github.com/${user.login}" target="_blank">@${user.login}</a></p>`;
+            }
+            
+            // További adatok
+            const details = [
+                { label: 'Bemutatkozás', value: user.bio },
+                { label: 'Helyszín', value: user.location },
+                { label: 'Weboldal', value: user.blog ? `<a href="${user.blog}" target="_blank">${user.blog}</a>` : null },
+                { label: 'Publikus repository-k', value: user.public_repos },
+                { label: 'Követők', value: user.followers },
+                { label: 'Követ', value: user.following }
+            ];
+            
+            details.forEach(detail => {
+                if (detail.value && detail.value !== '') {
+                    profileHTML += `<p><strong>${detail.label}:</strong> ${detail.value}</p>`;
+                }
+            });
+            
+            // Vissza gomb
+            profileHTML += `<button onclick="showUserSearchForm()" class="btn btn-secondary" style="margin-top: 20px;">Új keresés</button>`;
+            
+            userProfile.innerHTML = profileHTML;
+        }
+    </script>
+</body>
+</html>
