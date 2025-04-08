@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git App - Kedvenc repo-k</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .repo-list {
+            margin-top: 20px;
+        }
+        .repo-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .repo-item:hover {
+            background-color: #f8f9fa;
+        }
+        .no-repos {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Kedvenc repository-k</h2>
+        <div id="repo-list" class="repo-list">
+            <p class="no-repos">Betöltés...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStarredRepos();
+        });
+
+        function loadStarredRepos() {
+            fetch('https://api.github.com/user/starred', {
+                headers: {
+                    'Authorization': 'Bearer ' + GITHUB_ACCESS_TOKEN,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Nem sikerült betölteni a kedvenc repo-kat');
+                }
+                return response.json();
+            })
+            .then(repos => {
+                const repoList = document.getElementById('repo-list');
+                
+                if (repos.length === 0) {
+                    repoList.innerHTML = `
+                        <div class="no-repos">
+                            <p>Nincsenek kedvenc repository-k</p>
+                            <a href="repo-search.html" class="btn btn-primary">Repo keresése</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                repos.forEach(repo => {
+                    html += `
+                        <div class="repo-item card">
+                            <a href="repo.html?name=${encodeURIComponent(repo.full_name)}">
+                                <h4>${repo.full_name}</h4>
+                            </a>
+                            <p>${repo.description || 'Nincs leírás'}</p>
+                            <p>⭐ ${repo.stargazers_count} | 🍴 ${repo.forks_count}</p>
+                        </div>
+                    `;
+                });
+                repoList.innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('repo-list').innerHTML = `
+                    <div class="no-repos">
+                        <p>Hiba történt: ${error.message}</p>
+                        <button onclick="loadStarredRepos()" class="btn btn-primary">Újrapróbálkozás</button>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
